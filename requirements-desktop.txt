@@ -1,0 +1,6 @@
+# Desktop/packaged build dependencies (native window + bundler).
+# The plain server (run.sh) only needs requirements.txt; this pulls the GUI
+# backend (pywebview -> pyobjc on macOS) and the bundler.
+-r requirements.txt
+pywebview==5.3.2
+pyinstaller==6.11.1

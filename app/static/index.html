@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inventory Hub</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">📦 Inventory Hub</div>
+    <div class="topbar-actions">
+      <button id="btn-add-item" class="btn btn-primary">+ Add Item</button>
+      <button id="btn-refresh" class="btn" title="Re-read the hub. Sleeping devices cannot be polled — this shows what the hub has been told so far.">Refresh</button>
+      <button id="btn-devices" class="btn">Devices</button>
+      <a href="/api/export.csv" class="btn">Export CSV</a>
+      <a href="/api/backup" class="btn" download>Backup DB</a>
+    </div>
+  </header>
+
+  <!-- Banner shown when unregistered devices have phoned home -->
+  <div id="unknown-banner" class="banner hidden"></div>
+
+  <main class="layout">
+    <section class="panel panel-table">
+      <div class="panel-head">
+        <h2>Inventory</h2>
+        <input id="search" class="search" type="search" placeholder="Search code, name, location…" />
+      </div>
+      <table class="grid" id="items-table">
+        <thead>
+          <tr>
+            <th>Status</th>
+            <th>Code</th>
+            <th>Item Name</th>
+            <th>Location</th>
+            <th class="num">Count</th>
+            <th>Unit</th>
+            <th class="num">Threshold</th>
+            <th>Last Updated</th>
+            <th>Device</th>
+          </tr>
+        </thead>
+        <tbody id="items-body">
+          <tr><td colspan="9" class="empty">Loading…</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Detail drawer -->
+    <aside id="detail" class="panel panel-detail hidden"></aside>
+  </main>
+
+  <footer id="footer" class="footer"></footer>
+
+  <!-- Generic modal host -->
+  <div id="modal-overlay" class="overlay hidden">
+    <div class="modal" id="modal"></div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -2,8 +2,8 @@
 # Build a distributable Inventory Hub release for the CURRENT platform.
 #
 # Produces, in release/:
-#   macOS  -> InventoryHub-<version>-macos-<arch>.dmg
-#   Linux  -> InventoryHub-<version>-linux-<arch>.tar.gz
+#   macOS  -> InventoryHub-<version>-macos-<arm64|x64>.dmg
+#   Linux  -> InventoryHub-<version>-linux-<arm64|x64>.tar.gz
 #   plus SHA256SUMS.txt
 #
 # There is no paid certificate involved here. On macOS the bundle is ad-hoc
@@ -16,9 +16,17 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-VERSION="${VERSION:-0.2.0}"
-ARCH="$(uname -m)"
+VERSION="${VERSION:-$(cat VERSION)}"
+export INVL_VERSION="$VERSION"        # the .spec stamps this into Info.plist
 OUT="release"
+
+# Normalise the machine name so artifact names match across platforms:
+# uname reports x86_64 on Intel, but the Windows build calls the same thing x64.
+case "$(uname -m)" in
+  arm64|aarch64) ARCH="arm64" ;;
+  x86_64|amd64)  ARCH="x64" ;;
+  *)             ARCH="$(uname -m)" ;;
+esac
 
 ./build.sh
 
@@ -57,7 +65,7 @@ esac
 # Checksums let a customer confirm the download wasn't corrupted or swapped.
 # With no code signature this is the only integrity signal you can offer —
 # publish the hash on the download page, not just in the archive.
-( cd "$OUT" && shasum -a 256 * > SHA256SUMS.txt 2>/dev/null || true )
+( cd "$OUT" && shasum -a 256 InventoryHub-* > SHA256SUMS.txt )
 
 echo
 echo "Release artifacts in $OUT/:"

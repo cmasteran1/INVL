@@ -9,8 +9,26 @@ Builds a standalone desktop app:
 Build with:  pyinstaller --noconfirm --clean inventory_hub.spec
 """
 
+import os
 import sys
 from PyInstaller.utils.hooks import collect_all, collect_submodules
+
+# Version comes from one place. CI exports INVL_VERSION from the git tag;
+# a local build falls back to the VERSION file. Previously this spec carried a
+# hardcoded string that had already drifted from what release.sh was stamping
+# on the filename.
+try:
+    _spec_dir = SPECPATH  # injected by PyInstaller
+except NameError:
+    _spec_dir = os.path.dirname(os.path.abspath(__file__))
+
+VERSION = os.environ.get("INVL_VERSION", "").strip()
+if not VERSION:
+    try:
+        with open(os.path.join(_spec_dir, "VERSION")) as fh:
+            VERSION = fh.read().strip()
+    except OSError:
+        VERSION = "0.0.0"
 
 # Bundle the read-only resources the app reads at runtime.
 datas = [
@@ -98,8 +116,8 @@ if sys.platform == "darwin":
         info_plist={
             "CFBundleName": "Inventory Hub",
             "CFBundleDisplayName": "Inventory Hub",
-            "CFBundleShortVersionString": "0.1.0",
-            "CFBundleVersion": "0.1.0",
+            "CFBundleShortVersionString": VERSION,
+            "CFBundleVersion": VERSION,
             "NSHighResolutionCapable": True,
             # The dashboard is served over plain HTTP on localhost/LAN; allow
             # WKWebView to load it without HTTPS.

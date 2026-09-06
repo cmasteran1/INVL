@@ -8,7 +8,8 @@ REM Ship INSTALL.md with the download so customers know to expect it.
 setlocal enabledelayedexpansion
 cd /d "%~dp0"
 
-if "%VERSION%"=="" set VERSION=0.2.0
+if "%VERSION%"=="" set /p VERSION=<VERSION
+set INVL_VERSION=%VERSION%
 set OUT=release
 
 call build.bat

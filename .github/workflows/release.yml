@@ -1,0 +1,234 @@
+name: Release
+
+# Build the desktop app for every platform we ship, and publish it.
+#
+# PyInstaller cannot cross-compile: each artifact has to be produced on the OS
+# it targets. That is the entire reason this workflow exists — a Windows build
+# is impossible from a Mac laptop, and vice versa.
+#
+#   Push a tag  ->  builds every platform AND publishes a GitHub Release.
+#   Run by hand ->  builds every platform, uploads artifacts, publishes nothing.
+#
+# To cut a release:
+#     git tag v0.2.1 && git push origin v0.2.1
+#
+# ─── A note on Intel Macs ────────────────────────────────────────────────────
+# There is no free Intel macOS runner any more. `macos-13` was retired and the
+# replacements (`macos-15-intel` / `macos-15-large`) are *larger* runners:
+# billed per minute even on public repos, and only sold to Team/Enterprise
+# plans. An arm64 app will not launch at all on an Intel Mac, so instead the
+# build-macos-intel job below cross-builds x86_64 on the free arm64 runner
+# under Rosetta 2. It is marked continue-on-error: if Rosetta or an x86_64
+# wheel is unavailable, the Mac and Windows builds still ship without it.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build, no leading v (e.g. 0.2.1). Artifacts only, no release.'
+        required: true
+        default: '0.2.0'
+
+permissions:
+  contents: write        # the publish job creates a Release
+
+jobs:
+  build:
+    name: Build ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false   # a Windows failure shouldn't hide a working Mac build
+      matrix:
+        include:
+          - os: macos-15        # standard arm64 runner, free on public repos
+            label: macos-arm64
+          - os: windows-latest  # standard x64 runner, free on public repos
+            label: windows-x64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # 3.12 rather than 3.13: every binary dependency (pyobjc, pythonnet,
+          # zeroconf's Cython extensions, pydantic-core) has wheels here on both
+          # platforms, so no runner ends up compiling from source.
+          python-version: '3.12'
+
+      - name: Resolve version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            V="${GITHUB_REF_NAME#v}"          # v0.2.1 -> 0.2.1
+          else
+            V="${{ inputs.version }}"
+          fi
+          echo "Building version $V"
+          {
+            echo "VERSION=$V"
+            echo "INVL_VERSION=$V"
+          } >> "$GITHUB_ENV"
+
+      # Both branches call the same scripts a developer runs locally, so CI and
+      # a hand-built release can't drift apart.
+      - name: Build (macOS)
+        if: runner.os == 'macOS'
+        run: ./release.sh
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: release.bat
+
+      - name: Show what was produced
+        shell: bash
+        run: ls -lh release/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.label }}
+          path: |
+            release/*.dmg
+            release/*.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  build-macos-intel:
+    # Cross-build the Intel Mac app on the free arm64 runner via Rosetta 2.
+    # continue-on-error because this path depends on Rosetta being installable
+    # and on x86_64 wheels existing for every binary dependency. If either
+    # gives way, the arm64 and Windows artifacts must still reach the release.
+    name: Build macos-x64 (Rosetta)
+    runs-on: macos-15
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rosetta 2
+        run: sudo softwareupdate --install-rosetta --agree-to-license
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: 'x64'      # pulls the darwin-x64 CPython build
+
+      # Guard rail. If this silently ran on arm64 we would publish a file named
+      # "macos-x64" that cannot start on any Intel Mac, which is worse than
+      # publishing nothing. Fail here instead.
+      - name: Confirm the interpreter really is x86_64
+        run: |
+          set -euo pipefail
+          python -c "import platform, sys; print(platform.machine(), sys.version)"
+          test "$(python -c 'import platform; print(platform.machine())')" = "x86_64"
+
+      - name: Resolve version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            V="${GITHUB_REF_NAME#v}"
+          else
+            V="${{ inputs.version }}"
+          fi
+          echo "Building version $V"
+          {
+            echo "VERSION=$V"
+            echo "INVL_VERSION=$V"
+          } >> "$GITHUB_ENV"
+
+      - name: Build under Rosetta
+        # `arch -x86_64` makes uname report x86_64, so release.sh names the
+        # artifact macos-x64 without needing to know it is being cross-built.
+        run: arch -x86_64 ./release.sh
+
+      # Second guard rail: check the actual Mach-O, not just the interpreter.
+      - name: Confirm the built binary is x86_64
+        run: |
+          set -euo pipefail
+          BIN="dist/InventoryHub.app/Contents/MacOS/InventoryHub"
+          file "$BIN"
+          lipo -archs "$BIN"
+          lipo -archs "$BIN" | grep -qw x86_64
+
+      - name: Show what was produced
+        run: ls -lh release/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-x64
+          path: release/*.dmg
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Publish release
+    needs: [build, build-macos-intel]   # build-macos-intel is continue-on-error
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Stage artifacts and checksum them
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          find artifacts -type f \( -name '*.dmg' -o -name '*.zip' \) -exec cp {} out/ \;
+          cd out
+          sha256sum InventoryHub-* > SHA256SUMS.txt
+          echo "--- release contents ---"
+          ls -lh
+          cat SHA256SUMS.txt
+
+      - name: Write release notes
+        run: |
+          set -euo pipefail
+          {
+            echo "Desktop app for the INVL inventory hub. Free, no account, no subscription."
+            echo
+            echo "| Download | For |"
+            echo "|---|---|"
+            for f in out/*.dmg out/*.zip; do
+              [ -e "$f" ] || continue
+              n="$(basename "$f")"
+              case "$n" in
+                *macos-arm64*) what="macOS 12+, Apple silicon (M1/M2/M3/M4)" ;;
+                *macos-x64*)   what="macOS 12+, Intel" ;;
+                *windows-x64*) what="Windows 10 and 11, 64-bit" ;;
+                *)             what="" ;;
+              esac
+              echo "| \`$n\` | $what |"
+            done
+            echo
+            echo "Install steps, including the expected first-run security warning and the"
+            echo "firewall prompt that devices depend on, are in"
+            echo "[INSTALL.md](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/INSTALL.md)."
+            echo
+            echo "### Verify your download"
+            echo
+            echo "There is no code-signing certificate behind these builds, so this hash is"
+            echo "the integrity check you have. macOS: \`shasum -a 256 <file>\`."
+            echo "Windows: \`Get-FileHash -Algorithm SHA256 <file>\`."
+            echo
+            echo '```'
+            cat out/SHA256SUMS.txt
+            echo '```'
+          } > notes.md
+          echo "--- notes.md ---"
+          cat notes.md
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" out/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "INVL Hub ${GITHUB_REF_NAME#v}" \
+            --notes-file notes.md

@@ -34,6 +34,23 @@ def resource_path(*parts: str) -> Path:
     return base.joinpath(*parts)
 
 
+def app_version() -> str:
+    """The app's version, from one place.
+
+    Reads the VERSION file that ships beside the code (bundled into the app by
+    inventory_hub.spec). INVL_VERSION overrides it, which is how CI stamps a git
+    tag onto a build. Previously this string was duplicated in main.py and the
+    spec, and had already drifted apart.
+    """
+    override = os.environ.get("INVL_VERSION", "").strip()
+    if override:
+        return override
+    try:
+        return resource_path("VERSION").read_text().strip()
+    except OSError:
+        return "0.0.0"
+
+
 def user_data_dir() -> Path:
     """Per-user writable directory for the database and backups.
 

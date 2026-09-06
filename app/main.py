@@ -15,13 +15,13 @@ from fastapi.staticfiles import StaticFiles
 
 from . import mdns
 from .db import get_conn
-from .paths import resource_path
+from .paths import app_version, resource_path
 from .routes_device import router as device_router
 from .routes_items import router as items_router
 
 STATIC_DIR = resource_path("app", "static")
 
-app = FastAPI(title="Inventory Hub", version="0.2.0")
+app = FastAPI(title="Inventory Hub", version=app_version())
 app.include_router(device_router)
 app.include_router(items_router)
 

@@ -34,6 +34,7 @@ if not VERSION:
 datas = [
     ("app/schema.sql", "app"),
     ("app/static", "app/static"),
+    ("VERSION", "."),          # read at runtime by paths.app_version()
 ]
 binaries = []
 hiddenimports = []

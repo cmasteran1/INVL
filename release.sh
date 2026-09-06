@@ -41,12 +41,12 @@ case "$(uname -s)" in
     # Ad-hoc signature ("-" identity). Free, no Apple account. Replaces the
     # per-file signatures PyInstaller leaves behind with one consistent one so
     # the bundle isn't seen as tampered with.
-    echo "Ad-hoc signing…"
+    echo "Ad-hoc signing..."
     codesign --force --deep --sign - "$APP"
     codesign --verify --deep --strict "$APP" && echo "  signature OK (ad-hoc)"
 
     DMG="$OUT/InventoryHub-${VERSION}-macos-${ARCH}.dmg"
-    echo "Building $DMG…"
+    echo "Building ${DMG}..."
     STAGE="$(mktemp -d)"
     cp -R "$APP" "$STAGE/"
     cp INSTALL.md "$STAGE/READ ME FIRST.md"
@@ -57,7 +57,7 @@ case "$(uname -s)" in
     ;;
   *)
     TARBALL="$OUT/InventoryHub-${VERSION}-linux-${ARCH}.tar.gz"
-    echo "Building $TARBALL…"
+    echo "Building ${TARBALL}..."
     tar -czf "$TARBALL" -C dist InventoryHub
     ;;
 esac

@@ -116,14 +116,16 @@ jobs:
           python-version: '3.12'
           architecture: 'x64'      # pulls the darwin-x64 CPython build
 
-      # Guard rail. If this silently ran on arm64 we would publish a file named
-      # "macos-x64" that cannot start on any Intel Mac, which is worse than
-      # publishing nothing. Fail here instead.
+      # Guard rail. setup-python's "x64" macOS build is a universal2 binary, so
+      # run natively it reports arm64 and would silently produce an arm64 app
+      # named "macos-x64" that cannot start on any Intel Mac. `arch -x86_64`
+      # selects the x86_64 slice; verify that it actually took.
       - name: Confirm the interpreter really is x86_64
         run: |
           set -euo pipefail
-          python -c "import platform, sys; print(platform.machine(), sys.version)"
-          test "$(python -c 'import platform; print(platform.machine())')" = "x86_64"
+          echo "native:        $(python -c 'import platform; print(platform.machine())')"
+          echo "under Rosetta: $(arch -x86_64 python -c 'import platform; print(platform.machine())')"
+          test "$(arch -x86_64 python -c 'import platform; print(platform.machine())')" = "x86_64"
 
       - name: Resolve version
         shell: bash

@@ -12,6 +12,19 @@ Packaged:             this is the PyInstaller entry script.
 from __future__ import annotations
 
 import os
+import sys
+
+# A windowed PyInstaller build on Windows has no console, so sys.stdout and
+# sys.stderr are None. Anything that probes them crashes the app before the
+# window opens — uvicorn's log formatter calls sys.stdout.isatty() while
+# uvicorn.Config is being constructed. Route them to devnull instead. This must
+# run before uvicorn is imported or configured. (macOS windowed builds get real
+# streams, which is why only Windows crashed.)
+if sys.stdout is None or sys.stderr is None:
+    _devnull = open(os.devnull, "w", encoding="utf-8")
+    sys.stdout = sys.stdout or _devnull
+    sys.stderr = sys.stderr or _devnull
+
 import socket
 import threading
 import time

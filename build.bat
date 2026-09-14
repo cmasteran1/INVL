@@ -1,6 +1,6 @@
 @echo off
-REM Build the standalone Inventory Hub desktop app on Windows.
-REM Produces dist\InventoryHub\InventoryHub.exe
+REM Build the standalone INVL Hub desktop app on Windows.
+REM Produces dist\INVLHub\INVLHub.exe
 setlocal
 cd /d "%~dp0"
 
@@ -12,7 +12,7 @@ pip install --quiet --upgrade pip
 pip install --quiet -r requirements-desktop.txt
 
 echo Building... (this can take a minute)
-pyinstaller --noconfirm --clean inventory_hub.spec
+pyinstaller --noconfirm --clean invl_hub.spec
 
-echo Done -^> dist\InventoryHub\InventoryHub.exe
+echo Done -^> dist\INVLHub\INVLHub.exe
 endlocal

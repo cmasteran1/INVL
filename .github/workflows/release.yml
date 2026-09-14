@@ -150,7 +150,7 @@ jobs:
       - name: Confirm the built binary is x86_64
         run: |
           set -euo pipefail
-          BIN="dist/InventoryHub.app/Contents/MacOS/InventoryHub"
+          BIN="dist/INVL Hub.app/Contents/MacOS/INVLHub"
           file "$BIN"
           lipo -archs "$BIN"
           lipo -archs "$BIN" | grep -qw x86_64
@@ -184,7 +184,7 @@ jobs:
           mkdir -p out
           find artifacts -type f \( -name '*.dmg' -o -name '*.zip' \) -exec cp {} out/ \;
           cd out
-          sha256sum InventoryHub-* > SHA256SUMS.txt
+          sha256sum INVLHub-* > SHA256SUMS.txt
           echo "--- release contents ---"
           ls -lh
           cat SHA256SUMS.txt

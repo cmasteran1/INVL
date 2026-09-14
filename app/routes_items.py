@@ -486,10 +486,10 @@ def about():
     if port != 8000:
         warnings.append(
             f"Running on port {port}, but devices always connect on port 8000. "
-            f"Quit whatever is using port 8000, then restart Inventory Hub."
+            f"Quit whatever is using port 8000, then restart INVL Hub."
         )
     return {
-        "version": "0.1.0",
+        "version": paths.app_version(),
         "db_path": str(DB_PATH),
         "data_dir": str(paths.user_data_dir()),
         "frozen": paths.is_frozen(),

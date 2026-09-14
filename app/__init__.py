@@ -1,1 +1,1 @@
-"""Inventory Hub — local-first inventory counter backend."""
+"""INVL Hub — local-first inventory counter backend."""

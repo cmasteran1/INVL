@@ -1,4 +1,4 @@
--- Inventory Hub local schema. SQLite is the source of truth.
+-- INVL Hub local schema. SQLite is the source of truth.
 -- All timestamps are stored as ISO-8601 UTC strings (e.g. 2026-06-20T17:04:00Z).
 
 PRAGMA foreign_keys = ON;

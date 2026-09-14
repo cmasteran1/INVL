@@ -1,4 +1,4 @@
-"""Desktop entrypoint for Inventory Hub.
+"""Desktop entrypoint for INVL Hub.
 
 Starts the FastAPI/uvicorn server (bound to the LAN so ESP32 devices can still
 reach it) and opens the dashboard in a native window via pywebview. If the
@@ -79,7 +79,7 @@ def main() -> None:
     port = _choose_port()
     server = _start_server(port)
     url = f"http://{LOOPBACK}:{port}/"
-    print(f"Inventory Hub running at {url} (LAN: http://0.0.0.0:{port})")
+    print(f"INVL Hub running at {url} (LAN: http://0.0.0.0:{port})")
 
     # Headless mode: run as a background LAN server with no native window.
     if os.environ.get("INVENTORY_NO_WINDOW"):
@@ -93,7 +93,7 @@ def main() -> None:
         import webview  # pywebview
 
         window = webview.create_window(
-            "Inventory Hub", url, width=1180, height=800, min_size=(900, 600)
+            "INVL Hub", url, width=1180, height=800, min_size=(900, 600)
         )
         webview.start()  # blocks until the window is closed
     except Exception as exc:  # noqa: BLE001 - any failure means no GUI backend

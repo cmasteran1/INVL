@@ -1,7 +1,7 @@
 @echo off
-REM Build a distributable Inventory Hub release on Windows.
+REM Build a distributable INVL Hub release on Windows.
 REM
-REM Produces release\InventoryHub-<version>-windows-x64.zip plus SHA256SUMS.txt
+REM Produces release\INVLHub-<version>-windows-x64.zip plus SHA256SUMS.txt
 REM
 REM No code-signing certificate is used, so SmartScreen will warn on first run.
 REM Ship INSTALL.md with the download so customers know to expect it.
@@ -18,14 +18,14 @@ if errorlevel 1 exit /b 1
 if not exist "%OUT%" mkdir "%OUT%"
 del /q "%OUT%\*.zip" "%OUT%\SHA256SUMS.txt" 2>nul
 
-set ZIP=%OUT%\InventoryHub-%VERSION%-windows-x64.zip
+set ZIP=%OUT%\INVLHub-%VERSION%-windows-x64.zip
 echo Building %ZIP% ...
 
 REM Stage the app plus the install notes, then zip the whole folder.
 set STAGE=%TEMP%\invhub-stage
 if exist "%STAGE%" rmdir /s /q "%STAGE%"
 mkdir "%STAGE%"
-xcopy /e /i /q "dist\InventoryHub" "%STAGE%\InventoryHub" >nul
+xcopy /e /i /q "dist\INVLHub" "%STAGE%\INVLHub" >nul
 copy /y "INSTALL.md" "%STAGE%\READ ME FIRST.md" >nul
 
 powershell -NoProfile -Command ^

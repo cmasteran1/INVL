@@ -1,4 +1,4 @@
-# Inventory Hub
+# INVL Hub
 
 Local-first inventory counting server. Physical ESP32 counters with `+`/`−`
 buttons report to this app over the LAN; it stores everything in a local SQLite
@@ -14,7 +14,7 @@ the local Wi-Fi network.
 ## Architecture
 
 ```
-ESP32 counter ──HTTP──► Inventory Hub (FastAPI) ──► inventory_data.sqlite
+ESP32 counter ──HTTP──► INVL Hub (FastAPI) ──► inventory_data.sqlite
    (buttons + OLED)        dashboard at  /            (source of truth)
 ```
 
@@ -68,7 +68,7 @@ the LAN in the background.
 
 ```bash
 ./build.sh        # macOS / Linux   -> dist/InventoryHub.app
-build.bat         # Windows         -> dist\InventoryHub\InventoryHub.exe
+build.bat         # Windows         -> dist\INVLHub\INVLHub.exe
 ```
 
 `release.sh` / `release.bat` go further and produce something you can put on a
@@ -91,9 +91,9 @@ reinstalling the app:
 
 | OS | Path |
 |---|---|
-| macOS | `~/Library/Application Support/InventoryHub/inventory_data.sqlite` |
-| Windows | `%APPDATA%\InventoryHub\inventory_data.sqlite` |
-| Linux | `~/.local/share/InventoryHub/inventory_data.sqlite` |
+| macOS | `~/Library/Application Support/INVLHub/inventory_data.sqlite` |
+| Windows | `%APPDATA%\INVLHub\inventory_data.sqlite` |
+| Linux | `~/.local/share/INVLHub/inventory_data.sqlite` |
 
 ## API summary
 

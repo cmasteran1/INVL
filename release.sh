@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Build a distributable Inventory Hub release for the CURRENT platform.
+# Build a distributable INVL Hub release for the CURRENT platform.
 #
 # Produces, in release/:
-#   macOS  -> InventoryHub-<version>-macos-<arm64|x64>.dmg
-#   Linux  -> InventoryHub-<version>-linux-<arm64|x64>.tar.gz
+#   macOS  -> INVLHub-<version>-macos-<arm64|x64>.dmg
+#   Linux  -> INVLHub-<version>-linux-<arm64|x64>.tar.gz
 #   plus SHA256SUMS.txt
 #
 # There is no paid certificate involved here. On macOS the bundle is ad-hoc
@@ -35,7 +35,7 @@ rm -f "$OUT"/*.dmg "$OUT"/*.tar.gz "$OUT"/SHA256SUMS.txt 2>/dev/null || true
 
 case "$(uname -s)" in
   Darwin)
-    APP="dist/InventoryHub.app"
+    APP="dist/INVL Hub.app"
     [ -d "$APP" ] || { echo "error: $APP not found — did build.sh succeed?" >&2; exit 1; }
 
     # Ad-hoc signature ("-" identity). Free, no Apple account. Replaces the
@@ -45,27 +45,27 @@ case "$(uname -s)" in
     codesign --force --deep --sign - "$APP"
     codesign --verify --deep --strict "$APP" && echo "  signature OK (ad-hoc)"
 
-    DMG="$OUT/InventoryHub-${VERSION}-macos-${ARCH}.dmg"
+    DMG="$OUT/INVLHub-${VERSION}-macos-${ARCH}.dmg"
     echo "Building ${DMG}..."
     STAGE="$(mktemp -d)"
     cp -R "$APP" "$STAGE/"
     cp INSTALL.md "$STAGE/READ ME FIRST.md"
     ln -s /Applications "$STAGE/Applications"      # drag-to-install target
-    hdiutil create -volname "Inventory Hub" -srcfolder "$STAGE" \
+    hdiutil create -volname "INVL Hub" -srcfolder "$STAGE" \
                    -ov -format UDZO "$DMG" >/dev/null
     rm -rf "$STAGE"
     ;;
   *)
-    TARBALL="$OUT/InventoryHub-${VERSION}-linux-${ARCH}.tar.gz"
+    TARBALL="$OUT/INVLHub-${VERSION}-linux-${ARCH}.tar.gz"
     echo "Building ${TARBALL}..."
-    tar -czf "$TARBALL" -C dist InventoryHub
+    tar -czf "$TARBALL" -C dist INVLHub
     ;;
 esac
 
 # Checksums let a customer confirm the download wasn't corrupted or swapped.
 # With no code signature this is the only integrity signal you can offer —
 # publish the hash on the download page, not just in the archive.
-( cd "$OUT" && shasum -a 256 InventoryHub-* > SHA256SUMS.txt )
+( cd "$OUT" && shasum -a 256 INVLHub-* > SHA256SUMS.txt )
 
 echo
 echo "Release artifacts in $OUT/:"

@@ -1,4 +1,4 @@
-"""SQLite access layer for Inventory Hub.
+"""SQLite access layer for INVL Hub.
 
 The database file is the single source of truth. We keep one connection per
 process (SQLite handles concurrency fine for a single local app) guarded by a

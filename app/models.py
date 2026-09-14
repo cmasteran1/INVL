@@ -1,4 +1,4 @@
-"""Pydantic request/response models for the Inventory Hub API."""
+"""Pydantic request/response models for the INVL Hub API."""
 
 from __future__ import annotations
 

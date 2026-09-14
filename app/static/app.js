@@ -458,7 +458,7 @@ async function loadAbout() {
       footer.append(el("div", { class: "footer-warning" }, w));
     }
     footer.append(
-      el("span", {}, `Inventory Hub v${a.version}`),
+      el("span", {}, `INVL Hub v${a.version}`),
       el("span", {}, `${a.items} items · ${a.devices} devices`),
       el("span", {}, "Data: ", el("code", {}, a.db_path)),
       el("span", { class: "snap", title: "Save a timestamped backup into the data folder",

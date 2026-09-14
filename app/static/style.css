@@ -38,7 +38,8 @@ body {
   top: 0;
   z-index: 10;
 }
-.brand { font-size: 18px; font-weight: 700; letter-spacing: 0.2px; }
+.brand { font-size: 18px; font-weight: 700; letter-spacing: 0.2px; display: flex; align-items: center; gap: 8px; }
+.brand-icon { width: 24px; height: 24px; }
 .topbar-actions { display: flex; gap: 10px; align-items: center; }
 
 .conn-dot {

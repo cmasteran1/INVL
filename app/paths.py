@@ -16,7 +16,10 @@ import os
 import sys
 from pathlib import Path
 
-APP_NAME = "InventoryHub"
+APP_NAME = "INVLHub"
+# The app installed as "Inventory Hub" through v0.2.1 and kept its data here.
+# user_data_dir() renames that directory on first run after the rebrand.
+LEGACY_APP_NAME = "InventoryHub"
 
 
 def is_frozen() -> bool:
@@ -38,7 +41,7 @@ def app_version() -> str:
     """The app's version, from one place.
 
     Reads the VERSION file that ships beside the code (bundled into the app by
-    inventory_hub.spec). INVL_VERSION overrides it, which is how CI stamps a git
+    invl_hub.spec). INVL_VERSION overrides it, which is how CI stamps a git
     tag onto a build. Previously this string was duplicated in main.py and the
     spec, and had already drifted apart.
     """
@@ -54,9 +57,9 @@ def app_version() -> str:
 def user_data_dir() -> Path:
     """Per-user writable directory for the database and backups.
 
-    macOS:   ~/Library/Application Support/InventoryHub
-    Windows: %APPDATA%\\InventoryHub
-    Linux:   $XDG_DATA_HOME/InventoryHub (or ~/.local/share/InventoryHub)
+    macOS:   ~/Library/Application Support/INVLHub
+    Windows: %APPDATA%\\INVLHub
+    Linux:   $XDG_DATA_HOME/INVLHub (or ~/.local/share/INVLHub)
     """
     home = Path.home()
     if sys.platform == "darwin":
@@ -66,6 +69,16 @@ def user_data_dir() -> Path:
     else:
         base = Path(os.environ.get("XDG_DATA_HOME", home / ".local" / "share"))
     d = base / APP_NAME
+    legacy = base / LEGACY_APP_NAME
+    if not d.exists() and legacy.is_dir():
+        # One-time migration from the pre-rebrand install: same volume, so this
+        # is an atomic rename and the database moves with it. If it fails (e.g.
+        # the old dir is open elsewhere), fall through and keep using a fresh
+        # dir rather than crash on startup.
+        try:
+            legacy.rename(d)
+        except OSError:
+            pass
     d.mkdir(parents=True, exist_ok=True)
     return d
 

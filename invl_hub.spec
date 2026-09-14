@@ -1,12 +1,14 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""PyInstaller spec for Inventory Hub.
+"""PyInstaller spec for INVL Hub.
 
 Builds a standalone desktop app:
-  * macOS   -> dist/InventoryHub.app  (double-clickable bundle)
-  * Windows -> dist/InventoryHub/InventoryHub.exe
-  * Linux   -> dist/InventoryHub/InventoryHub
+  * macOS   -> "dist/INVL Hub.app"  (double-clickable bundle)
+  * Windows -> dist/INVLHub/INVLHub.exe
+  * Linux   -> dist/INVLHub/INVLHub
 
-Build with:  pyinstaller --noconfirm --clean inventory_hub.spec
+Build with:  pyinstaller --noconfirm --clean invl_hub.spec
+
+Icons come from packaging/ (regenerate with packaging/make_icons.py).
 """
 
 import os
@@ -84,7 +86,10 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="InventoryHub",
+    name="INVLHub",
+    # The .ico only applies to the Windows executable; macOS gets its icon
+    # from the BUNDLE below.
+    icon="packaging/icon.ico" if sys.platform == "win32" else None,
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -104,19 +109,22 @@ coll = COLLECT(
     strip=False,
     upx=False,
     upx_exclude=[],
-    name="InventoryHub",
+    name="INVLHub",
 )
 
 # macOS: wrap the collected output in a proper .app bundle.
 if sys.platform == "darwin":
     app = BUNDLE(
         coll,
-        name="InventoryHub.app",
-        icon=None,
-        bundle_identifier="com.inventoryhub.app",
+        name="INVL Hub.app",
+        icon="packaging/icon.icns",
+        # Changed from com.inventoryhub.app at the INVL Hub rebrand: macOS
+        # treats this as a new app, so first launch re-asks the firewall
+        # question. Data survives via the migration in app/paths.py.
+        bundle_identifier="com.getinvl.hub",
         info_plist={
-            "CFBundleName": "Inventory Hub",
-            "CFBundleDisplayName": "Inventory Hub",
+            "CFBundleName": "INVL Hub",
+            "CFBundleDisplayName": "INVL Hub",
             "CFBundleShortVersionString": VERSION,
             "CFBundleVersion": VERSION,
             "NSHighResolutionCapable": True,

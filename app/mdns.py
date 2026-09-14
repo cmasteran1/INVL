@@ -1,4 +1,4 @@
-"""Advertise the Inventory Hub on the local network via mDNS/Bonjour.
+"""Advertise the INVL Hub on the local network via mDNS/Bonjour.
 
 Devices resolve the hub by name (``inventoryhub.local``) instead of a hardcoded
 IP, so a manager laptop that gets a new DHCP address doesn't strand its devices.
@@ -19,9 +19,9 @@ HOSTNAME = "inventoryhub.local."
 # firmware queries by name (_invhub._tcp) so it finds THIS hub unambiguously and
 # adapts automatically when the computer's IP changes.
 SERVICE_TYPE = "_http._tcp.local."
-SERVICE_NAME = "Inventory Hub._http._tcp.local."
+SERVICE_NAME = "INVL Hub._http._tcp.local."
 DISCOVERY_TYPE = "_invhub._tcp.local."
-DISCOVERY_NAME = "Inventory Hub._invhub._tcp.local."
+DISCOVERY_NAME = "INVL Hub._invhub._tcp.local."
 
 _zc = None            # active Zeroconf instance
 _infos: list = []     # registered ServiceInfo objects
@@ -69,7 +69,7 @@ def start(port: int) -> None:
         from zeroconf import ServiceInfo, Zeroconf
     except ImportError:
         # In a packaged build this means the bundler dropped zeroconf — see the
-        # collect_all("zeroconf") call in inventory_hub.spec.
+        # collect_all("zeroconf") call in invl_hub.spec.
         _fail("zeroconf is missing from this build; devices cannot discover the hub")
         return
 
@@ -99,7 +99,7 @@ def start(port: int) -> None:
         # failed:" with nothing after it tells a support caller nothing.
         detail = str(exc) or type(exc).__name__
         if type(exc).__name__ == "NonUniqueNameException":
-            detail += " (another Inventory Hub is already advertising on this network)"
+            detail += " (another INVL Hub is already advertising on this network)"
         _fail(f"advertisement failed: {detail}")
         stop()
 

@@ -1,4 +1,4 @@
-"""Inventory Hub — FastAPI entrypoint.
+"""INVL Hub — FastAPI entrypoint.
 
 Run locally with:  uvicorn app.main:app --host 0.0.0.0 --port 8000
 The dashboard is served at /, the API under /api.
@@ -21,7 +21,7 @@ from .routes_items import router as items_router
 
 STATIC_DIR = resource_path("app", "static")
 
-app = FastAPI(title="Inventory Hub", version=app_version())
+app = FastAPI(title="INVL Hub", version=app_version())
 app.include_router(device_router)
 app.include_router(items_router)
 

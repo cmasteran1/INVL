@@ -450,6 +450,15 @@ async function loadAbout() {
   const footer = $("#footer");
   try {
     const a = await api("/api/about");
+    // The address a counter's "Hub address" field needs, up top where nobody
+    // has to dig through their system settings for it.
+    const addr = $("#hub-address");
+    if (addr) {
+      addr.innerHTML = "";
+      if (a.lan_ip) {
+        addr.append("This computer's address: ", el("code", {}, a.lan_ip));
+      }
+    }
     footer.innerHTML = "";
     // Setup problems that would otherwise be invisible: the packaged app has no
     // console, so this banner is the only place a broken mDNS advertisement or a

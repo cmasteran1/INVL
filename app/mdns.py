@@ -60,6 +60,15 @@ def _primary_lan_ip() -> Optional[str]:
         s.close()
 
 
+def lan_ip() -> Optional[str]:
+    """This machine's LAN IP, for showing people what to type into a device.
+
+    Independent of whether mDNS advertisement succeeded: the address is worth
+    showing even (especially) when discovery is broken.
+    """
+    return _primary_lan_ip()
+
+
 def start(port: int) -> None:
     """Register the hub's mDNS hostname + services. Safe to call once at startup."""
     global _zc, _infos

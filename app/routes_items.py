@@ -490,6 +490,7 @@ def about():
         )
     return {
         "version": paths.app_version(),
+        "lan_ip": mdns.lan_ip(),
         "db_path": str(DB_PATH),
         "data_dir": str(paths.user_data_dir()),
         "frozen": paths.is_frozen(),

@@ -47,13 +47,18 @@ case "$(uname -s)" in
 
     DMG="$OUT/INVLHub-${VERSION}-macos-${ARCH}.dmg"
     echo "Building ${DMG}..."
+    # dmgbuild instead of plain hdiutil because it can embed EULA.txt as a
+    # click-through license: macOS shows it when the image is opened and mounts
+    # nothing until the customer clicks Agree.
+    ./.venv/bin/pip install --quiet dmgbuild
     STAGE="$(mktemp -d)"
-    cp -R "$APP" "$STAGE/"
     cp INSTALL.md "$STAGE/READ ME FIRST.md"
-    ln -s /Applications "$STAGE/Applications"      # drag-to-install target
-    hdiutil create -volname "INVL Hub" -srcfolder "$STAGE" \
-                   -ov -format UDZO "$DMG" >/dev/null
+    ./.venv/bin/dmgbuild -s packaging/dmg_settings.py \
+      -D app="$APP" -D readme="$STAGE/READ ME FIRST.md" "INVL Hub" "$DMG"
     rm -rf "$STAGE"
+    # A DMG without the agreement is a packaging regression: fail the build.
+    hdiutil imageinfo "$DMG" | grep -q "Software License Agreement: true" \
+      || { echo "error: $DMG has no license agreement" >&2; exit 1; }
     ;;
   *)
     TARBALL="$OUT/INVLHub-${VERSION}-linux-${ARCH}.tar.gz"

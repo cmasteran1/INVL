@@ -1,0 +1,70 @@
+INVL Hub End User License Agreement
+
+Effective September 15, 2026. INVL Hub is made by INVL LLC, an Ohio limited
+liability company ("INVL", "we", or "us"). By clicking Agree, or by installing
+or using INVL Hub, you accept this agreement. If you do not accept it, do not
+install the software.
+
+This is a summary written to be read. The full Terms of Use and Privacy Policy
+live at https://getinvl.com/legal and also apply. If anything is unclear,
+email invlmanagement@gmail.com and we will explain it.
+
+1. Your license
+
+We grant you a personal, non-exclusive, non-transferable, revocable licence to
+install and use INVL Hub for your own home or business. You may not resell the
+software, or remove or alter any notice in it.
+
+2. Your data stays yours, on your computer
+
+INVL Hub stores your inventory data on your own computer and does not send
+your inventory data to us. Your counter devices talk only to the computer
+running INVL Hub, over your own network. The software has no accounts, no
+licence keys, and no telemetry: it does not contact INVL at all. You are
+responsible for that computer, for keeping your own backups, and for the
+security of the network your counters use.
+
+3. What INVL Hub is, and is not, for
+
+INVL Hub is a counting aid. It records what people enter into it, and it can
+be wrong: a press can be missed or repeated, a device can lose power or its
+network connection, and people forget to press. It does not guarantee stock
+levels, and you remain responsible for checking counts and for every ordering,
+purchasing, and operating decision you make.
+
+Do not rely on INVL Hub where an inaccurate count could cause harm, including
+tracking medication, controlled substances, medical supplies, safety
+equipment, food-safety or temperature compliance, or anything else where a
+missed or wrong count could lead to injury, illness, or a regulatory breach.
+
+4. No warranty
+
+THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE", WITHOUT WARRANTY OF ANY
+KIND, EXPRESS OR IMPLIED, INCLUDING ANY IMPLIED WARRANTY OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, ACCURACY, OR NON-INFRINGEMENT. WE DO NOT
+WARRANT THAT THE SOFTWARE WILL BE ERROR-FREE OR UNINTERRUPTED, OR THAT COUNTS
+WILL BE ACCURATE.
+
+5. Limitation of liability
+
+TO THE FULLEST EXTENT THE LAW ALLOWS, WE ARE NOT LIABLE FOR ANY INDIRECT,
+INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR FOR LOST PROFITS,
+LOST SALES, SPOILED OR EXPIRED STOCK, STOCKOUTS, LOST DATA, OR BUSINESS
+INTERRUPTION, ARISING FROM YOUR USE OF OR INABILITY TO USE THE SOFTWARE, EVEN
+IF WE WERE TOLD SUCH DAMAGES WERE POSSIBLE. OUR TOTAL LIABILITY FOR ANY CLAIM
+IS LIMITED TO THE GREATER OF THE AMOUNT YOU PAID US IN THE TWELVE MONTHS
+BEFORE THE CLAIM AND ONE HUNDRED US DOLLARS. Some jurisdictions do not allow
+some of these exclusions, so some may not apply to you.
+
+6. Governing law
+
+This agreement is governed by the laws of the State of Ohio, without regard to
+its conflict-of-law rules. Any dispute will be brought in the state or federal
+courts located in Hamilton County, Ohio, and you and we consent to their
+jurisdiction.
+
+7. Changes
+
+We may update this agreement for future versions of the software. The version
+that shipped with your copy applies to that copy; the current version is
+always at https://getinvl.com/legal.

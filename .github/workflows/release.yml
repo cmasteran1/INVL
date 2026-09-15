@@ -92,7 +92,7 @@ jobs:
           name: ${{ matrix.label }}
           path: |
             release/*.dmg
-            release/*.zip
+            release/*.exe
           if-no-files-found: error
           retention-days: 14
 
@@ -182,7 +182,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p out
-          find artifacts -type f \( -name '*.dmg' -o -name '*.zip' \) -exec cp {} out/ \;
+          find artifacts -type f \( -name '*.dmg' -o -name '*.exe' \) -exec cp {} out/ \;
           cd out
           sha256sum INVLHub-* > SHA256SUMS.txt
           echo "--- release contents ---"
@@ -197,7 +197,7 @@ jobs:
             echo
             echo "| Download | For |"
             echo "|---|---|"
-            for f in out/*.dmg out/*.zip; do
+            for f in out/*.dmg out/*.exe; do
               [ -e "$f" ] || continue
               n="$(basename "$f")"
               case "$n" in

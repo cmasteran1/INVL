@@ -24,7 +24,7 @@ shasum -a 256 ~/Downloads/INVLHub-*.dmg
 Windows — open PowerShell and run:
 
 ```powershell
-Get-FileHash -Algorithm SHA256 "$HOME\Downloads\INVLHub-windows-x64.zip"
+Get-FileHash -Algorithm SHA256 "$HOME\Downloads\INVLHub-*-windows-x64-setup.exe"
 ```
 
 If the value doesn't match the one on the download page, delete the file and
@@ -34,10 +34,12 @@ download it again. Don't install it.
 
 ## macOS
 
-1. Open the downloaded `.dmg` file.
+1. Open the downloaded `.dmg` file. The license agreement appears; click
+   **Agree** to continue (Disagree simply closes the image without installing
+   anything).
 2. Drag **INVL Hub** onto the **Applications** folder.
 3. Open your **Applications** folder and double-click **INVL Hub**.
-4. macOS will block it, with a message like *"Apple could not verify Inventory
+4. macOS will block it, with a message like *"Apple could not verify INVL
    Hub is free of malware"*. Click **Done**.
 5. Open **System Settings** → **Privacy & Security**.
 6. Scroll down to the **Security** section. You'll see *"INVL Hub was
@@ -54,7 +56,7 @@ quarantined, not that anything is wrong with the file. Clear the quarantine
 flag from Terminal:
 
 ```bash
-xattr -dr com.apple.quarantine /Applications/Inventory\ Hub.app
+xattr -dr com.apple.quarantine /Applications/INVL\ Hub.app
 ```
 
 Then open the app normally. If you'd rather not use Terminal, contact us and
@@ -64,16 +66,18 @@ we'll walk you through it.
 
 ## Windows
 
-1. **Before extracting**, right-click the downloaded `.zip` file → **Properties**
-   → tick **Unblock** at the bottom → **OK**. This saves you a warning on every
-   file inside.
-2. Right-click the `.zip` → **Extract All…** and choose where to put it, for
-   example `C:\Program Files\INVLHub` or your Desktop.
-3. Open the extracted `INVLHub` folder and double-click **INVLHub.exe**.
-4. Windows shows a blue **"Windows protected your PC"** box. Click **More info**,
+1. Double-click the downloaded setup file
+   (`INVLHub-<version>-windows-x64-setup.exe`).
+2. Windows shows a blue **"Windows protected your PC"** box. Click **More info**,
    then **Run anyway**.
+3. Read the license agreement, choose **I accept the agreement**, and click
+   **Next**. Nothing is installed if you decline.
+4. Click **Install**, then **Finish**. The installer adds a Start Menu entry
+   and an uninstaller; no administrator password is needed.
 
-INVL Hub now opens normally every time.
+INVL Hub now opens normally every time, from the Start Menu or the optional
+desktop shortcut. To remove it later, use **Settings → Apps → Installed apps**
+like any other program (your count data is kept; see below).
 
 ---
 

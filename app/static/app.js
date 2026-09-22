@@ -445,6 +445,57 @@ async function openDevicesModal(focusItemId = null) {
       el("button", { class: "btn btn-primary", onclick: () => openRegisterModal() }, "+ Register Device"))));
 }
 
+// --- Update check ------------------------------------------------------------
+// Manual only: the app never phones home on its own (the download page
+// promises exactly that). Clicking asks GitHub, where releases are published,
+// for the newest version number; nothing about this machine or its inventory
+// is sent.
+const RELEASES_API = "https://api.github.com/repos/cmasteran1/INVL/releases/latest";
+const DOWNLOAD_URL = "https://getinvl.com/download";
+
+function newerVersion(current, latest) {
+  const parse = (v) => String(v).replace(/^v/, "").split(".").map((n) => parseInt(n, 10) || 0);
+  const a = parse(latest), b = parse(current);
+  for (let i = 0; i < 3; i++) {
+    if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) > (b[i] || 0);
+  }
+  return false;
+}
+
+function updateCheck(current) {
+  const span = el("span", {});
+  const reset = () => {
+    span.innerHTML = "";
+    span.append(el("span", {
+      class: "snap",
+      title: "Asks GitHub for the newest version number. Nothing about you or your inventory is sent.",
+      onclick: run,
+    }, "Check for updates"));
+  };
+  async function run() {
+    span.textContent = "Checking…";
+    try {
+      const r = await fetch(RELEASES_API, { headers: { Accept: "application/vnd.github+json" } });
+      if (!r.ok) throw new Error(String(r.status));
+      const latest = String((await r.json()).tag_name || "").replace(/^v/, "");
+      if (latest && newerVersion(current, latest)) {
+        span.innerHTML = "";
+        span.append(`v${latest} is available: `,
+          el("a", { href: DOWNLOAD_URL, target: "_blank", rel: "noopener" }, "download it"),
+          " (your counts are kept through updates)");
+      } else {
+        span.textContent = `Up to date (v${current})`;
+        setTimeout(reset, 6000);
+      }
+    } catch {
+      span.textContent = "Couldn't check: no internet, or GitHub unreachable.";
+      setTimeout(reset, 6000);
+    }
+  }
+  reset();
+  return span;
+}
+
 // --- Footer / about ---------------------------------------------------------
 async function loadAbout() {
   const footer = $("#footer");
@@ -468,6 +519,7 @@ async function loadAbout() {
     }
     footer.append(
       el("span", {}, `INVL Hub v${a.version}`),
+      updateCheck(a.version),
       el("span", {}, `${a.items} items · ${a.devices} devices`),
       el("span", {}, "Data: ", el("code", {}, a.db_path)),
       el("span", { class: "snap", title: "Save a timestamped backup into the data folder",

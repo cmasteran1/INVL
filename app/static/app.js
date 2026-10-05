@@ -4,6 +4,8 @@
 let items = [];
 let selectedItemId = null;
 let searchTerm = "";
+let detailTab = "details";   // "details" | "trends"
+let trendsKey = null;        // what the open Trends view was drawn from
 const REFRESH_MS = 4000;
 
 // --- Helpers ----------------------------------------------------------------
@@ -86,6 +88,18 @@ function detailIsBeingEdited() {
     ["INPUT", "SELECT", "TEXTAREA"].includes(active.tagName);
 }
 
+// The Trends view only needs redrawing when the item itself changed (or every
+// few minutes, so the "now" marker keeps up). Redrawing it on every refresh
+// would drop the hover tooltip out from under the pointer.
+function trendsKeyFor(it) {
+  return [it.item_id, it.item_code, it.item_name, it.location, it.unit_name, it.current_count,
+    it.low_threshold, it.last_updated, Math.floor(Date.now() / 300000)].join("|");
+}
+function trendsUpToDate() {
+  const it = items.find((x) => x.item_id === selectedItemId);
+  return detailTab === "trends" && it && trendsKey === trendsKeyFor(it);
+}
+
 // --- Items table ------------------------------------------------------------
 async function loadItems() {
   try {
@@ -94,7 +108,7 @@ async function loadItems() {
     // Don't rebuild the detail panel while the user is typing in it — the
     // periodic refresh would otherwise wipe an in-progress entry (e.g. "Set
     // exact"). Skip the re-render whenever a field inside the panel has focus.
-    if (selectedItemId && !detailIsBeingEdited()) renderDetail(selectedItemId);
+    if (selectedItemId && !detailIsBeingEdited() && !trendsUpToDate()) renderDetail(selectedItemId);
     await loadUnknown();
   } catch (e) {
     setConn(false);
@@ -170,6 +184,27 @@ async function renderDetail(id) {
         el("h2", {}, el("span", { class: "code-chip" }, it.item_code), " ", it.item_name),
         el("div", { class: "detail-sub" }, `${it.location || "No location"} · ${it.unit_name || "units"}`)),
       el("button", { class: "close-x", title: "Close", onclick: () => { selectedItemId = null; panel.classList.add("hidden"); renderTable(); } }, "×")),
+  );
+
+  // --- Tabs
+  const tab = (key, label) => el("button", {
+    class: "tab" + (detailTab === key ? " active" : ""),
+    role: "tab",
+    "aria-selected": String(detailTab === key),
+    onclick: () => { detailTab = key; renderDetail(id); },
+  }, label);
+  panel.append(el("div", { class: "tabs", role: "tablist" }, tab("details", "Details"), tab("trends", "Trends")));
+
+  panel.classList.toggle("wide", detailTab === "trends");
+  if (detailTab === "trends") {
+    const host = el("div", {});
+    panel.append(host);
+    trendsKey = trendsKeyFor(it);
+    renderTrends(host, it);
+    return;
+  }
+
+  panel.append(
     el("div", { class: "bigcount" }, String(it.current_count)),
     el("div", {}, el("span", { class: `pill ${it.status}` }, it.status),
       it.low_threshold != null ? el("span", { class: "muted" }, `  threshold ${it.low_threshold}`) : null),

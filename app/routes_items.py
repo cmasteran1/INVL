@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 import os
 import sqlite3
 import tempfile
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
@@ -105,9 +107,12 @@ def create_item(payload: ItemCreate):
         )
         item_id = cur.lastrowid
         item = conn.execute("SELECT * FROM items WHERE item_id = ?", (item_id,)).fetchone()
+        # The payload records the starting low threshold, so the trends view can
+        # tell which past days were low against the threshold in effect then.
         log_event(
             conn, item_id=item_id, device_id=None, source="software", delta=item["current_count"],
             count_before=0, count_after=item["current_count"], reason="item_created",
+            raw_payload=payload.model_dump(),
         )
         if payload.device_id:
             _assign(conn, payload.device_id, item_id)
@@ -226,6 +231,96 @@ def item_history(item_id: int, limit: int = 200):
             (item_id, limit),
         ).fetchall()
         return [dict(r) for r in rows]
+
+
+def _to_db_time(value: str | None) -> str | None:
+    """Normalize a client ISO-8601 timestamp (any offset, optional millis) to
+    the stored UTC format, so range bounds compare correctly as strings."""
+    if value is None:
+        return None
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"bad timestamp: {value}")
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+@router.get("/items/{item_id}/timeline")
+def item_timeline(item_id: int, start: str | None = None, end: str | None = None):
+    """Count history for the trends charts, over [start, end) in UTC.
+
+    Bucketing into hours/days/months happens in the browser, in the viewer's
+    local time zone, so this returns raw changes rather than aggregates:
+    the count going into the range, every change inside it, and the full
+    history of the low threshold (so past days are judged against the
+    threshold that applied then, not today's).
+    """
+    start_db, end_db = _to_db_time(start), _to_db_time(end)
+    with transaction() as conn:
+        item = conn.execute(
+            "SELECT low_threshold FROM items WHERE item_id = ?", (item_id,)
+        ).fetchone()
+        if item is None:
+            raise HTTPException(status_code=404, detail="item not found")
+
+        first = conn.execute(
+            "SELECT MIN(timestamp) AS t FROM events WHERE item_id = ?", (item_id,)
+        ).fetchone()["t"]
+
+        start_count = None
+        if start_db is not None:
+            row = conn.execute(
+                """SELECT count_after FROM events
+                   WHERE item_id = ? AND count_after IS NOT NULL AND timestamp < ?
+                   ORDER BY timestamp DESC, event_id DESC LIMIT 1""",
+                (item_id, start_db),
+            ).fetchone()
+            start_count = row["count_after"] if row else None
+
+        # Only rows that moved the count (plus creation, which starts the line).
+        # Metadata edits, reassignments and superseded batches carry no change.
+        sql = """SELECT timestamp, delta, count_after, source, reason FROM events
+                 WHERE item_id = ? AND count_after IS NOT NULL
+                   AND (delta != 0 OR reason = 'item_created')"""
+        args: list = [item_id]
+        if start_db is not None:
+            sql += " AND timestamp >= ?"
+            args.append(start_db)
+        if end_db is not None:
+            sql += " AND timestamp < ?"
+            args.append(end_db)
+        sql += " ORDER BY timestamp, event_id"
+        events = [
+            {"t": r["timestamp"], "delta": r["delta"], "count": r["count_after"],
+             "source": r["source"], "reason": r["reason"]}
+            for r in conn.execute(sql, args)
+        ]
+
+        thresholds = []
+        for r in conn.execute(
+            """SELECT timestamp, raw_payload FROM events
+               WHERE item_id = ? AND reason IN ('item_created', 'metadata_update')
+                 AND raw_payload LIKE '%low_threshold%'
+               ORDER BY timestamp, event_id""",
+            (item_id,),
+        ):
+            try:
+                payload = json.loads(r["raw_payload"])
+            except (TypeError, ValueError):
+                continue
+            if "low_threshold" in payload:
+                thresholds.append({"t": r["timestamp"], "value": payload["low_threshold"]})
+
+        return {
+            "item_id": item_id,
+            "first_t": first,
+            "start_count": start_count,
+            "events": events,
+            "thresholds": thresholds,
+            "current_threshold": item["low_threshold"],
+        }
 
 
 # --- Devices ----------------------------------------------------------------

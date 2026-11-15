@@ -317,6 +317,84 @@ def _app_menu():
     ]
 
 
+_mac_menu_installed = False
+_mac_menu_targets: list = []    # keeps each menu item's handler alive
+
+
+def _mac_menu_target_class():
+    """An Objective-C object a menu item can call. Defined lazily (pyobjc only
+    exists on macOS) and only once: Objective-C class names are global."""
+    global _MacMenuTarget
+    if _MacMenuTarget is None:
+        import objc
+        from Foundation import NSObject
+
+        class INVLMenuTarget(NSObject):
+            def initWithFunction_(self, fn):
+                self = objc.super(INVLMenuTarget, self).init()
+                if self is not None:
+                    self.fn = fn
+                return self
+
+            def run_(self, sender):
+                # Off the main thread: the actions open dialogs, and pywebview's
+                # dialog calls wait on the main thread.
+                threading.Thread(target=self.fn, daemon=True).start()
+
+        _MacMenuTarget = INVLMenuTarget
+    return _MacMenuTarget
+
+
+_MacMenuTarget = None
+
+
+def _install_mac_menu() -> None:
+    """Add the File menu to the macOS menu bar.
+
+    Built here rather than with pywebview's menu support, which has two bugs in
+    5.3.2 that together made v0.2.8 ship without a usable File menu:
+
+    * menus passed to webview.start(menu=...) are added before the window
+      exists, then wiped when the window first appears and pywebview resets
+      the menu bar to its defaults; and
+    * it never keeps a reference to the object behind each item, so Python
+      frees it, macOS finds nothing to call, and every item is greyed out.
+
+    So: wait until the page has loaded (the reset has happened by then), and
+    keep every handler in _mac_menu_targets for the life of the app.
+    """
+    global _mac_menu_installed
+    if _mac_menu_installed:     # "loaded" fires again on every page reload
+        return
+    _mac_menu_installed = True
+
+    import AppKit
+    from PyObjCTools import AppHelper
+    from webview.menu import MenuSeparator
+
+    def add():
+        target_cls = _mac_menu_target_class()
+        bar = AppKit.NSApplication.sharedApplication().mainMenu()
+        for i, menu in enumerate(_app_menu()):
+            sub = AppKit.NSMenu.alloc().initWithTitle_(menu.title)
+            for entry in menu.items:
+                if isinstance(entry, MenuSeparator):
+                    sub.addItem_(AppKit.NSMenuItem.separatorItem())
+                    continue
+                target = target_cls.alloc().initWithFunction_(entry.function)
+                _mac_menu_targets.append(target)
+                item = AppKit.NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
+                    entry.title, "run:", "")
+                item.setTarget_(target)
+                sub.addItem_(item)
+            top = AppKit.NSMenuItem.alloc().init()
+            top.setSubmenu_(sub)
+            # macOS convention: File sits right after the app menu.
+            bar.insertItem_atIndex_(top, 1 + i)
+
+    AppHelper.callAfter(add)    # menus must be touched on the main thread
+
+
 def _run_headless(server, url: str) -> None:
     """Keep the server running with no window (pure LAN-server mode)."""
     print(f"Headless mode — dashboard at {url}. Ctrl-C to stop.")
@@ -349,7 +427,12 @@ def main() -> None:
             "INVL Hub", url, width=1180, height=800, min_size=(900, 600),
             js_api=Bridge(),
         )
-        webview.start(menu=_app_menu())  # blocks until the window is closed
+        if sys.platform == "darwin":
+            # See _install_mac_menu: passing menu= to start() doesn't survive on macOS.
+            _window.events.loaded += _install_mac_menu
+            webview.start()  # blocks until the window is closed
+        else:
+            webview.start(menu=_app_menu())  # blocks until the window is closed
     except Exception as exc:  # noqa: BLE001 - any failure means no GUI backend
         print(f"Native window unavailable ({exc}); opening in your browser instead.")
         import webbrowser

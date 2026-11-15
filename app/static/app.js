@@ -6,7 +6,12 @@ let selectedItemId = null;
 let searchTerm = "";
 let detailTab = "details";   // "details" | "trends"
 let trendsKey = null;        // what the open Trends view was drawn from
-const REFRESH_MS = 4000;
+// The dashboard polls the hub for what devices have reported. Devices sleep
+// with their radio off and check in on their own schedule, so polling faster
+// can't make counts arrive sooner; it only redraws the page more often.
+const REFRESH_MS = 5000;
+let itemsSig = "";            // last data the table was drawn from
+let unknownSig = "";          // last data the new-device banner was drawn from
 
 // --- Helpers ----------------------------------------------------------------
 const $ = (sel) => document.querySelector(sel);
@@ -58,7 +63,8 @@ function toast(msg, isError = false) {
   t.classList.toggle("error", isError);
   t.classList.add("show");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
+  // Messages with a file path need time to read.
+  toastTimer = setTimeout(() => t.classList.remove("show"), msg.length > 60 ? 7000 : 2600);
 }
 
 function relTime(iso) {
@@ -101,19 +107,44 @@ function trendsUpToDate() {
 }
 
 // --- Items table ------------------------------------------------------------
-async function loadItems() {
+// Signature of what's on screen. "x min ago" labels age even when the data
+// doesn't, so the minute is part of it: an idle dashboard redraws once a
+// minute instead of every poll.
+function signature(data) {
+  return JSON.stringify(data) + "|" + Math.floor(Date.now() / 60000);
+}
+
+// Detail-panel content for one item; it only needs rebuilding when this changes.
+let detailSig = "";
+function detailSigFor(id) {
+  const it = items.find((x) => x.item_id === id);
+  return it ? `${id}|${detailTab}|${JSON.stringify(it)}|${Math.floor(Date.now() / 60000)}` : "";
+}
+
+async function loadItems({ force = false } = {}) {
   try {
-    items = await api("/api/items");
-    renderTable();
-    // Don't rebuild the detail panel while the user is typing in it — the
-    // periodic refresh would otherwise wipe an in-progress entry (e.g. "Set
-    // exact"). Skip the re-render whenever a field inside the panel has focus.
-    if (selectedItemId && !detailIsBeingEdited() && !trendsUpToDate()) renderDetail(selectedItemId);
+    const fresh = await api("/api/items");
+    const sig = signature(fresh);
+    if (force || sig !== itemsSig) {
+      items = fresh;
+      itemsSig = sig;
+      renderTable();
+    }
+    // Rebuild the detail panel only when its item changed, and never while the
+    // user is typing in it (that would wipe an in-progress "Set exact").
+    if (selectedItemId && !detailIsBeingEdited() && !trendsUpToDate()
+        && (force || detailSigFor(selectedItemId) !== detailSig)) {
+      renderDetail(selectedItemId);
+    }
     await loadUnknown();
   } catch (e) {
     setConn(false);
   }
 }
+
+// Don't poll while the window is minimised or hidden; catch up on return.
+function poll() { if (!document.hidden) loadItems(); }
+document.addEventListener("visibilitychange", () => { if (!document.hidden) loadItems(); });
 
 function renderTable() {
   const body = $("#items-body");
@@ -172,18 +203,21 @@ function selectItem(id) {
 // --- Detail drawer ----------------------------------------------------------
 async function renderDetail(id) {
   const it = items.find((x) => x.item_id === id);
-  if (!it) { $("#detail").classList.add("hidden"); return; }
-  const panel = $("#detail");
-  panel.classList.remove("hidden");
+  if (!it) { $("#detail").classList.add("hidden"); detailSig = ""; return; }
+  detailSig = detailSigFor(id);
+  const live = $("#detail");
+  live.classList.remove("hidden");
+  // Build off-screen and swap in one step, after the history has loaded, so a
+  // refresh never flashes an empty panel or "Loading…".
+  const panel = el("aside", { id: "detail", class: live.className });
 
   const dev = it.device;
-  panel.innerHTML = "";
   panel.append(
     el("div", { class: "detail-head" },
       el("div", {},
         el("h2", {}, el("span", { class: "code-chip" }, it.item_code), " ", it.item_name),
         el("div", { class: "detail-sub" }, `${it.location || "No location"} · ${it.unit_name || "units"}`)),
-      el("button", { class: "close-x", title: "Close", onclick: () => { selectedItemId = null; panel.classList.add("hidden"); renderTable(); } }, "×")),
+      el("button", { class: "close-x", title: "Close", onclick: () => { selectedItemId = null; detailSig = ""; $("#detail").classList.add("hidden"); renderTable(); } }, "×")),
   );
 
   // --- Tabs
@@ -200,6 +234,7 @@ async function renderDetail(id) {
     const host = el("div", {});
     panel.append(host);
     trendsKey = trendsKeyFor(it);
+    live.replaceWith(panel);
     renderTrends(host, it);
     return;
   }
@@ -281,11 +316,10 @@ async function renderDetail(id) {
 
   // --- History
   panel.append(el("div", { class: "section-title" }, "History"));
-  const histWrap = el("div", {}, el("div", { class: "muted" }, "Loading…"));
+  const histWrap = el("div", {});
   panel.append(histWrap);
   try {
     const hist = await api(`/api/items/${id}/history`);
-    histWrap.innerHTML = "";
     if (hist.length === 0) { histWrap.append(el("div", { class: "muted" }, "No history yet.")); }
     else {
       const tbl = el("table", { class: "history" },
@@ -306,13 +340,22 @@ async function renderDetail(id) {
       tbl.append(tb);
       histWrap.append(tbl);
     }
-  } catch (e) { histWrap.innerHTML = ""; histWrap.append(el("div", { class: "muted" }, "Failed to load history.")); }
+  } catch (e) { histWrap.append(el("div", { class: "muted" }, "Failed to load history.")); }
+  // Another render (a click, or a newer refresh) may have started while the
+  // history was loading; only the newest one gets to swap in.
+  if (detailSig !== detailSigFor(id) || selectedItemId !== id) return;
+  const cur = $("#detail");
+  if (cur.contains(document.activeElement)) return;   // user started typing meanwhile
+  cur.replaceWith(panel);
 }
 
 // --- Unknown device banner --------------------------------------------------
 async function loadUnknown() {
   let unknown = [];
   try { unknown = await api("/api/devices/unknown"); } catch { return; }
+  const sig = signature(unknown);
+  if (sig === unknownSig) return;
+  unknownSig = sig;
   const banner = $("#unknown-banner");
   if (!unknown.length) { banner.classList.add("hidden"); return; }
   banner.classList.remove("hidden");
@@ -566,28 +609,69 @@ async function loadAbout() {
 async function snapshotBackup() {
   try {
     const r = await api("/api/backup/snapshot", { method: "POST" });
-    toast("Backup saved to data folder");
-    console.log("Snapshot:", r.path);
+    toast(`Backup saved: ${r.path}`);
   } catch (e) { toast(e.message, true); }
 }
 
+// --- Export / backup ---------------------------------------------------------
+// Inside the desktop window these go through Python (window.pywebview.api),
+// which shows a native Save dialog: a web view can't take downloads, and a
+// plain link to the CSV replaced the whole dashboard with its text. In an
+// ordinary browser (headless mode) they fall back to a normal download.
+const desktopApi = () => window.pywebview && window.pywebview.api;
+
+async function browserDownload(url, what) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${what} failed (${res.status})`);
+  const raw = /filename=([^;]+)/.exec(res.headers.get("content-disposition") || "")?.[1] || "download";
+  const name = raw.replace(/"/g, "").trim();
+  const a = el("a", { href: URL.createObjectURL(await res.blob()), download: name });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  toast(`${what} downloaded: ${name}`);
+}
+
+function fileButton(sel, method, url, what) {
+  $(sel).addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    try {
+      const native = desktopApi();
+      if (native && native[method]) {
+        // Python shows the success/failure toast itself (via invlNotify), so
+        // the File menu and this button report the same way.
+        await native[method]();
+      } else {
+        await browserDownload(url, what);
+      }
+    } catch (err) {
+      toast(`${what} failed: ${err.message || err}`, true);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
+// Called from desktop.py (File menu actions, restore).
+window.invlNotify = (msg, isError = false, reload = false) => {
+  toast(msg, isError);
+  if (reload) {
+    selectedItemId = null;
+    $("#detail").classList.add("hidden");
+    loadItems({ force: true });
+    loadAbout();
+  }
+};
+
 // --- Wire up ----------------------------------------------------------------
 $("#btn-add-item").addEventListener("click", () => openItemModal());
-$("#btn-refresh").addEventListener("click", async (e) => {
-  const btn = e.currentTarget;
-  btn.disabled = true;
-  try {
-    await Promise.all([loadItems(), loadUnknown(), loadAbout()]);
-    toast("Refreshed");
-  } finally {
-    btn.disabled = false;
-  }
-});
+fileButton("#btn-export", "export_csv", "/api/export.csv", "Export");
+fileButton("#btn-backup", "backup_db", "/api/backup", "Backup");
 $("#btn-devices").addEventListener("click", () => openDevicesModal());
 $("#search").addEventListener("input", (e) => { searchTerm = e.target.value; renderTable(); });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
 
 loadItems();
 loadAbout();
-setInterval(loadItems, REFRESH_MS);
+setInterval(poll, REFRESH_MS);
 setInterval(loadAbout, 30000);

@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-import csv
-import io
 import json
 import os
-import sqlite3
 import tempfile
 from datetime import datetime, timezone
 
@@ -14,8 +11,8 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from starlette.background import BackgroundTask
 
-from . import mdns, paths
-from .db import DB_PATH, get_conn, transaction, utcnow_iso
+from . import fileops, mdns, paths
+from .db import DB_PATH, transaction, utcnow_iso
 from .models import (
     AdjustRequest,
     AssignRequest,
@@ -494,57 +491,27 @@ def dismiss_unknown_device(device_id: str):
 
 @router.get("/export.csv")
 def export_csv():
-    with transaction() as conn:
-        rows = conn.execute(
-            "SELECT * FROM items WHERE is_active = 1 ORDER BY item_name COLLATE NOCASE"
-        ).fetchall()
-        buf = io.StringIO()
-        writer = csv.writer(buf)
-        writer.writerow(
-            ["item_code", "item_name", "location", "unit_name", "current_count",
-             "low_threshold", "status", "last_updated", "device_id", "device_online"]
-        )
-        for r in rows:
-            rec = _item_row(conn, r)
-            dev = rec["device"]
-            writer.writerow([
-                rec["item_code"], rec["item_name"], rec["location"], rec["unit_name"],
-                rec["current_count"], rec["low_threshold"], rec["status"], rec["last_updated"],
-                dev["device_id"] if dev else "", (dev["online"] if dev else ""),
-            ])
-        buf.seek(0)
-        return StreamingResponse(
-            iter([buf.getvalue()]),
-            media_type="text/csv",
-            headers={"Content-Disposition": "attachment; filename=inventory_export.csv"},
-        )
+    """CSV download for a plain browser. The desktop window can't take
+    downloads, so it saves through a native dialog instead (see fileops)."""
+    return StreamingResponse(
+        iter([fileops.build_csv()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={fileops.export_filename()}"},
+    )
 
 
 # --- Backup & info ----------------------------------------------------------
 
-def _consistent_backup(dest_path: str) -> None:
-    """Write a transactionally-consistent copy of the live DB using SQLite's
-    online backup API (safe even while the app is running)."""
-    src = get_conn()
-    dest = sqlite3.connect(dest_path)
-    try:
-        with dest:
-            src.backup(dest)
-    finally:
-        dest.close()
-
-
 @router.get("/backup")
 def download_backup():
     """Download a consistent snapshot of the SQLite database file."""
-    stamp = utcnow_iso().replace(":", "").replace("-", "")  # 20260620T162654Z
     fd, tmp = tempfile.mkstemp(suffix=".sqlite", prefix="inventory_backup_")
     os.close(fd)
-    _consistent_backup(tmp)
+    fileops.write_backup(tmp)
     return FileResponse(
         tmp,
         media_type="application/x-sqlite3",
-        filename=f"inventory_backup_{stamp}.sqlite",
+        filename=fileops.backup_filename(),
         background=BackgroundTask(lambda: os.path.exists(tmp) and os.remove(tmp)),
     )
 
@@ -552,12 +519,7 @@ def download_backup():
 @router.post("/backup/snapshot")
 def snapshot_backup():
     """Write a timestamped backup into the local data dir (stays on device)."""
-    backups = paths.user_data_dir() / "backups"
-    backups.mkdir(parents=True, exist_ok=True)
-    stamp = utcnow_iso().replace(":", "").replace("-", "")
-    dest = backups / f"inventory_backup_{stamp}.sqlite"
-    _consistent_backup(str(dest))
-    return {"status": "ok", "path": str(dest)}
+    return {"status": "ok", "path": fileops.snapshot()["path"]}
 
 
 @router.get("/about")

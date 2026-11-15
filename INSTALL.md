@@ -126,5 +126,13 @@ reinstalling the app does not delete them.
 | Windows | `%APPDATA%\INVLHub\` |
 
 Use **Snapshot backup** at the bottom of the dashboard to save a dated copy into
-that same folder, or **Backup DB** in the toolbar to save a copy anywhere you
-like. Do this before moving to a new computer.
+that same folder, or **Back Up** in the toolbar (also **File → Back Up
+Database…**) to save a copy anywhere you like. Do this before moving to a new
+computer. To load a backup, use **File → Restore From Backup…**; your current
+data is saved to the backups folder first, so a restore can be undone.
+
+## Uninstalling
+
+Use **File → Uninstall INVL Hub…**. It asks whether to keep your data (kept by
+default, so a reinstall picks up where you left off) or move it to the Trash /
+Recycle Bin. On Windows, **Settings → Apps → Installed apps** also works.

@@ -56,6 +56,7 @@ _MIGRATIONS = [
     ("devices", "last_boot_id", "TEXT"),
     ("devices", "last_event_seq", "INTEGER NOT NULL DEFAULT -1"),
     ("items", "override_epoch", "INTEGER NOT NULL DEFAULT 0"),
+    ("items", "unit_cost", "REAL"),
 ]
 
 

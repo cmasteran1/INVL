@@ -53,6 +53,7 @@ class ItemCreate(BaseModel):
     unit_name: Optional[str] = None
     current_count: int = 0
     low_threshold: Optional[int] = None
+    unit_cost: Optional[float] = Field(default=None, ge=0)
     device_id: Optional[str] = None  # optionally assign a device on creation
 
 
@@ -62,6 +63,7 @@ class ItemUpdate(BaseModel):
     location: Optional[str] = None
     unit_name: Optional[str] = None
     low_threshold: Optional[int] = None
+    unit_cost: Optional[float] = Field(default=None, ge=0)
     is_active: Optional[bool] = None
 
 

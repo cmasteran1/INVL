@@ -34,6 +34,8 @@ CREATE TABLE IF NOT EXISTS items (
     -- superseded rather than applied on top.
     override_epoch INTEGER NOT NULL DEFAULT 0,
     low_threshold  INTEGER,
+    -- What one unit costs the business, in dollars. Optional.
+    unit_cost      REAL,
     is_active      INTEGER NOT NULL DEFAULT 1,
     last_updated   TEXT,
     FOREIGN KEY (device_id) REFERENCES devices(device_id) ON DELETE SET NULL

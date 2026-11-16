@@ -56,6 +56,7 @@ def _item_row(conn, row) -> dict:
         "unit_name": row["unit_name"],
         "current_count": row["current_count"],
         "low_threshold": row["low_threshold"],
+        "unit_cost": row["unit_cost"],
         "is_active": bool(row["is_active"]),
         "last_updated": row["last_updated"],
         "status": _item_status(row["current_count"], row["low_threshold"]),
@@ -90,8 +91,9 @@ def create_item(payload: ItemCreate):
     with transaction() as conn:
         cur = conn.execute(
             """INSERT INTO items
-               (item_code, item_name, location, unit_name, current_count, low_threshold, last_updated)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+               (item_code, item_name, location, unit_name, current_count, low_threshold,
+                unit_cost, last_updated)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 payload.item_code.upper(),
                 payload.item_name,
@@ -99,6 +101,7 @@ def create_item(payload: ItemCreate):
                 payload.unit_name,
                 max(0, payload.current_count),
                 payload.low_threshold,
+                payload.unit_cost,
                 utcnow_iso(),
             ),
         )

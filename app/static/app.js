@@ -80,6 +80,9 @@ function relTime(iso) {
   return `${Math.round(hrs / 24)}d ago`;
 }
 
+const money = (n) => n == null ? "—"
+  : n.toLocaleString(undefined, { style: "currency", currency: "USD" });
+
 function fmtTime(iso) {
   if (!iso) return "—";
   return new Date(iso.replace(" ", "T")).toLocaleString();
@@ -157,7 +160,7 @@ function renderTable() {
     (it.location || "").toLowerCase().includes(term)
   );
   if (filtered.length === 0) {
-    body.append(el("tr", {}, el("td", { colspan: "9", class: "empty" },
+    body.append(el("tr", {}, el("td", { colspan: "10", class: "empty" },
       items.length === 0 ? "No items yet. Click “+ Add Item” to start." : "No matches.")));
     return;
   }
@@ -186,6 +189,7 @@ function renderTable() {
       el("td", {}, it.location || "—"),
       el("td", { class: "num count" }, String(it.current_count)),
       el("td", {}, it.unit_name || "—"),
+      el("td", { class: "num" + (it.unit_cost == null ? " muted" : "") }, money(it.unit_cost)),
       el("td", { class: "num" }, it.low_threshold ?? "—"),
       el("td", { class: "muted" }, relTime(it.last_updated)),
       el("td", {}, devCell),
@@ -249,6 +253,10 @@ async function renderDetail(id) {
   const meta = el("dl", { class: "meta-grid" });
   meta.append(
     el("dt", {}, "Last updated"), el("dd", {}, fmtTime(it.last_updated)),
+    el("dt", {}, "Cost"),
+    el("dd", {}, it.unit_cost != null
+      ? `${money(it.unit_cost)} per ${it.unit_name || "unit"} · ${money(it.unit_cost * it.current_count)} on hand`
+      : el("span", { class: "muted" }, "Not set (Edit details)")),
     el("dt", {}, "Device"),
     el("dd", {}, dev
       ? el("span", { class: "dev-state" }, el("span", { class: `dot ${dev.online ? "on" : "off"}` }),
@@ -396,12 +404,16 @@ function openItemModal(existing = null) {
   const unit = el("input", { placeholder: "sleeve", value: existing?.unit_name || "" });
   const thresh = el("input", { type: "number", min: "0", placeholder: "5", value: existing?.low_threshold ?? "" });
   const startCount = el("input", { type: "number", min: "0", value: "0" });
+  const cost = el("input", { type: "number", min: "0", step: "0.01", placeholder: "4.50",
+    value: existing?.unit_cost ?? "" });
 
   const form = el("div", { class: "modal-form" },
     el("div", { class: "row-2" }, field("Code (max 5)", code), field("Low threshold", thresh)),
     field("Item name", name),
     el("div", { class: "row-2" }, field("Location", loc), field("Unit", unit)),
-    isEdit ? null : field("Starting count", startCount),
+    el("div", { class: "row-2" },
+      field("Cost per unit ($)", cost),
+      isEdit ? el("div", {}) : field("Starting count", startCount)),
     el("div", { class: "modal-actions" },
       el("button", { class: "btn", onclick: closeModal }, "Cancel"),
       el("button", { class: "btn btn-primary", onclick: save }, isEdit ? "Save" : "Create")));
@@ -414,7 +426,11 @@ function openItemModal(existing = null) {
         location: loc.value.trim() || null,
         unit_name: unit.value.trim() || null,
         low_threshold: thresh.value === "" ? null : parseInt(thresh.value, 10),
+        unit_cost: cost.value === "" ? null : parseFloat(cost.value),
       };
+      if (payload.unit_cost != null && !(payload.unit_cost >= 0)) {
+        toast("Cost must be a number, 0 or more", true); return;
+      }
       if (!payload.item_code || !payload.item_name) { toast("Code and name are required", true); return; }
       if (isEdit) {
         await api(`/api/items/${existing.item_id}`, { method: "PATCH", body: JSON.stringify(payload) });

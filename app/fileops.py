@@ -50,14 +50,15 @@ def build_csv() -> str:
         writer = csv.writer(buf)
         writer.writerow(
             ["item_code", "item_name", "location", "unit_name", "current_count",
-             "low_threshold", "status", "last_updated", "device_id", "device_online"]
+             "low_threshold", "unit_cost", "status", "last_updated", "device_id", "device_online"]
         )
         for r in rows:
             rec = _item_row(conn, r)
             dev = rec["device"]
             writer.writerow([
                 rec["item_code"], rec["item_name"], rec["location"], rec["unit_name"],
-                rec["current_count"], rec["low_threshold"], rec["status"], rec["last_updated"],
+                rec["current_count"], rec["low_threshold"],
+                "" if rec["unit_cost"] is None else rec["unit_cost"], rec["status"], rec["last_updated"],
                 dev["device_id"] if dev else "", (dev["online"] if dev else ""),
             ])
         return buf.getvalue()
